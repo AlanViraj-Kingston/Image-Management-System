@@ -75,10 +75,10 @@ export const imageService = {
   },
 
   /**
-   * Get presigned URL for image
+   * Get URL for image
    * @param {number} imageId - Image ID
-   * @param {number} expiresIn - Expiration time in seconds (default: 3600)
-   * @returns {Promise} Presigned URL
+   * @param {number} expiresIn - Expiration time in seconds (default: 3600, not used for local storage)
+   * @returns {Promise} Image URL data
    */
   async getImageUrl(imageId, expiresIn = 3600) {
     try {

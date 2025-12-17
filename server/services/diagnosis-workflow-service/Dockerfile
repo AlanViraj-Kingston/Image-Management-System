@@ -12,7 +12,7 @@ COPY services/diagnosis-workflow-service/app ./app
 # Expose port
 EXPOSE 8003
 
-# Run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8003"]
+# Run the application with reload for development
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8003", "--reload"]
 
 

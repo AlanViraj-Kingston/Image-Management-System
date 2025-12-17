@@ -2,28 +2,26 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 from app import routes
-from app.minio_client import ensure_bucket_exists
+from app.file_storage import UPLOAD_DIR
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
-# Ensure MinIO bucket exists
-try:
-    ensure_bucket_exists()
-except Exception as e:
-    print(f"Warning: Could not initialize MinIO bucket: {e}")
+# Ensure upload directory exists
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+print(f"Image upload directory: {UPLOAD_DIR}")
 
 app = FastAPI(
     title="Imaging Service",
     description="""
-    Service for managing medical images with MinIO storage.
+    Service for managing medical images with local file storage.
     
     ## Features
     * Upload medical images (X-Ray, MRI, CT, Ultrasound)
     * Retrieve image metadata and URLs
-    * Generate presigned URLs for secure access
+    * Serve images directly
     * Delete images
-    * MinIO object storage integration
+    * Local file storage integration
     """,
     version="1.0.0",
     docs_url="/docs",
