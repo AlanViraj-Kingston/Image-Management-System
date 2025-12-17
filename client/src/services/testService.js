@@ -80,6 +80,20 @@ export const testService = {
   },
 
   /**
+   * Get all tests for an appointment
+   * @param {number} appointmentId - Appointment ID
+   * @returns {Promise} List of tests
+   */
+  async getAppointmentTests(appointmentId) {
+    try {
+      const response = await testApi.get(`/api/v1/tests/appointment/${appointmentId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
    * Get all tests assigned to a radiologist
    * @param {number} radiologistId - Radiologist ID
    * @returns {Promise} List of tests

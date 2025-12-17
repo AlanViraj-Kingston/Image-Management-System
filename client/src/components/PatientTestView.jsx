@@ -5,7 +5,7 @@ import { imageService } from '../services/imageService';
 import { toast } from 'react-toastify';
 import jsPDF from 'jspdf';
 
-const PatientTestView = ({ patient, doctorId, onBack }) => {
+const PatientTestView = ({ patient, doctorId, appointmentId, onBack }) => {
   const [tests, setTests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -158,6 +158,7 @@ const PatientTestView = ({ patient, doctorId, onBack }) => {
       const testData = {
         patient_id: patient.patient_id,
         doctor_id: doctorId,
+        appointment_id: appointmentId || null,
         test_type: formData.test_type,
         radiologist_id: formData.radiologist_id ? parseInt(formData.radiologist_id) : null,
         status: TEST_STATUS.SCAN_TO_BE_TAKEN,

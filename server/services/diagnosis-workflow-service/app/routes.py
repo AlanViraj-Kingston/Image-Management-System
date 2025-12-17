@@ -16,6 +16,7 @@ def create_test(test: schemas.MedicalTestCreate, db: Session = Depends(get_db)):
         patient_id=test.patient_id,
         doctor_id=test.doctor_id,
         radiologist_id=test.radiologist_id,
+        appointment_id=test.appointment_id,
         test_type=test.test_type,
         status=test.status,
         created_date=datetime.utcnow(),
@@ -70,6 +71,14 @@ def get_radiologist_tests(radiologist_id: int, db: Session = Depends(get_db)):
     ).order_by(models.MedicalTest.created_date.desc()).all()
     return tests
 
+@router.get("/tests/appointment/{appointment_id}", response_model=List[schemas.MedicalTestResponse])
+def get_appointment_tests(appointment_id: int, db: Session = Depends(get_db)):
+    """Get all tests for a specific appointment"""
+    tests = db.query(models.MedicalTest).filter(
+        models.MedicalTest.appointment_id == appointment_id
+    ).order_by(models.MedicalTest.created_date.desc()).all()
+    return tests
+
 @router.put("/tests/{test_id}", response_model=schemas.MedicalTestResponse)
 def update_test(
     test_id: int,
@@ -111,6 +120,10 @@ def update_test(
     # Update radiologist_id if provided (can be None to unassign)
     if "radiologist_id" in fields_set:
         test.radiologist_id = test_update.radiologist_id
+    
+    # Update appointment_id if provided
+    if "appointment_id" in fields_set:
+        test.appointment_id = test_update.appointment_id
     
     # Update status if provided
     if "status" in fields_set:

@@ -41,6 +41,7 @@ class MedicalTest(Base):
     patient_id = Column(Integer, nullable=False, index=True)
     doctor_id = Column(Integer, nullable=False, index=True)  # Staff ID of doctor who created the test
     radiologist_id = Column(Integer, nullable=True, index=True)  # Assigned radiologist
+    appointment_id = Column(Integer, nullable=True, index=True)  # Link to appointment
     test_type = Column(SQLEnum(ScanType), nullable=False)
     status = Column(SQLEnum(TestStatus), default=TestStatus.SCAN_TO_BE_TAKEN, nullable=False)
     report_id = Column(Integer, nullable=True)  # Generated report ID

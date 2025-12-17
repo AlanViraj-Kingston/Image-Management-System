@@ -6,6 +6,7 @@ import PatientTestView from '../components/PatientTestView';
 import RadiologistTestsView from '../components/RadiologistTestsView';
 import AppointmentsView from '../components/AppointmentsView';
 import DoctorAppointmentsView from '../components/DoctorAppointmentsView';
+import PatientAppointmentsView from '../components/PatientAppointmentsView';
 import { authService } from '../services/authService';
 
 const Dashboard = () => {
@@ -147,6 +148,8 @@ const Dashboard = () => {
       <main className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
         {isPatient && activeView === 'details' ? (
           <PatientDetails userId={user.user_id} onBack={handleBack} />
+        ) : isPatient && activeView === 'appointments' ? (
+          <PatientAppointmentsView patientId={user.user_id} onBack={handleBack} />
         ) : isRadiologist && activeView === 'tests' ? (
           <RadiologistTestsView
             radiologistId={staffInfo?.staff_id}
@@ -341,9 +344,9 @@ const Dashboard = () => {
                     </p>
                   </button>
 
-                  {/* Reports Card */}
+                  {/* Your Appointments Card */}
                   <button
-                    onClick={() => handleCardClick('reports')}
+                    onClick={() => handleCardClick('appointments')}
                     className="bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-green-500 hover:shadow-lg transition-all duration-200 cursor-pointer text-left group"
                   >
                     <div className="flex items-center mb-4">
@@ -358,16 +361,16 @@ const Dashboard = () => {
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             strokeWidth={2}
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                           />
                         </svg>
                       </div>
                     </div>
                     <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                      Reports
+                      Your Appointments
                     </h3>
                     <p className="text-gray-600 text-sm">
-                      Access your medical reports and diagnostic results
+                      View your appointments, tests, and diagnostic reports
                     </p>
                   </button>
 

@@ -48,12 +48,14 @@ class MedicalTestCreate(BaseModel):
     patient_id: int
     doctor_id: int
     radiologist_id: Optional[int] = None
+    appointment_id: Optional[int] = None
     test_type: ScanType
     status: TestStatus = TestStatus.SCAN_TO_BE_TAKEN
 
 class MedicalTestUpdate(BaseModel):
     test_type: Optional[ScanType] = None
     radiologist_id: Optional[int] = None
+    appointment_id: Optional[int] = None
     status: Optional[TestStatus] = None
     report_id: Optional[int] = None
     image_id: Optional[int] = None
@@ -63,6 +65,7 @@ class MedicalTestResponse(BaseModel):
     patient_id: int
     doctor_id: int
     radiologist_id: Optional[int] = None
+    appointment_id: Optional[int] = None
     test_type: ScanType
     status: TestStatus
     report_id: Optional[int] = None

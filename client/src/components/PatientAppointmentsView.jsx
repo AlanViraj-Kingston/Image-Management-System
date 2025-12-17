@@ -1,47 +1,64 @@
 import { useState, useEffect } from 'react';
 import { appointmentService, APPOINTMENT_STATUS } from '../services/appointmentService';
 import { authService } from '../services/authService';
-import PatientTestView from './PatientTestView';
+import PatientAppointmentDetailsView from './PatientAppointmentDetailsView';
 import { toast } from 'react-toastify';
 
-const DoctorAppointmentsView = ({ doctorId, staffId, onBack }) => {
+const PatientAppointmentsView = ({ patientId, onBack }) => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedAppointment, setSelectedAppointment] = useState(null);
-  const [patientMap, setPatientMap] = useState({});
+  const [patientInfo, setPatientInfo] = useState(null);
+  const [doctorMap, setDoctorMap] = useState({});
 
   useEffect(() => {
+    fetchPatientInfo();
     fetchAppointments();
-  }, [staffId]);
+  }, [patientId]);
 
   useEffect(() => {
-    // Fetch patient details for all appointments
-    const fetchPatients = async () => {
+    // Fetch doctor details for all appointments
+    const fetchDoctors = async () => {
       const map = {};
       for (const appointment of appointments) {
-        if (!map[appointment.patient_id]) {
+        if (!map[appointment.doctor_id]) {
           try {
-            const patient = await authService.getPatientById(appointment.patient_id);
-            map[appointment.patient_id] = patient;
+            const allStaff = await authService.getAllStaff();
+            const doctor = allStaff.find(s => s.staff_id === appointment.doctor_id);
+            if (doctor) {
+              map[appointment.doctor_id] = doctor.name;
+            }
           } catch (err) {
-            console.error(`Failed to fetch patient ${appointment.patient_id}:`, err);
+            console.error(`Failed to fetch doctor ${appointment.doctor_id}:`, err);
           }
         }
       }
-      setPatientMap(map);
+      setDoctorMap(map);
     };
 
     if (appointments.length > 0) {
-      fetchPatients();
+      fetchDoctors();
     }
   }, [appointments]);
 
+  const fetchPatientInfo = async () => {
+    try {
+      const data = await authService.getPatientByUserId(patientId);
+      setPatientInfo(data);
+    } catch (err) {
+      console.error('Failed to load patient info:', err);
+    }
+  };
+
   const fetchAppointments = async () => {
+    if (!patientInfo?.patient_id) {
+      return; // Wait for patientInfo to be loaded
+    }
     try {
       setLoading(true);
       setError('');
-      const data = await appointmentService.getDoctorAppointments(staffId);
+      const data = await appointmentService.getPatientAppointments(patientInfo.patient_id);
       setAppointments(data || []);
     } catch (err) {
       setError(err.detail || err.message || 'Failed to load appointments');
@@ -50,6 +67,13 @@ const DoctorAppointmentsView = ({ doctorId, staffId, onBack }) => {
       setLoading(false);
     }
   };
+
+  // Refetch appointments when patientInfo is loaded
+  useEffect(() => {
+    if (patientInfo?.patient_id) {
+      fetchAppointments();
+    }
+  }, [patientInfo?.patient_id]);
 
   const getStatusBadgeColor = (status) => {
     switch (status) {
@@ -78,20 +102,15 @@ const DoctorAppointmentsView = ({ doctorId, staffId, onBack }) => {
   };
 
   const handleAppointmentClick = (appointment) => {
-    const patient = patientMap[appointment.patient_id];
-    if (patient) {
-      setSelectedAppointment({ ...appointment, patient });
-    } else {
-      toast.error('Patient information not available');
-    }
+    setSelectedAppointment(appointment);
   };
 
   if (selectedAppointment) {
     return (
-      <PatientTestView
-        patient={selectedAppointment.patient}
-        doctorId={doctorId}
-        appointmentId={selectedAppointment.appointment_id}
+      <PatientAppointmentDetailsView
+        appointment={selectedAppointment}
+        patientInfo={patientInfo}
+        doctorName={doctorMap[selectedAppointment.doctor_id]}
         onBack={() => setSelectedAppointment(null)}
       />
     );
@@ -101,7 +120,7 @@ const DoctorAppointmentsView = ({ doctorId, staffId, onBack }) => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">My Appointments</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Your Appointments</h2>
           <button
             onClick={onBack}
             className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
@@ -129,7 +148,7 @@ const DoctorAppointmentsView = ({ doctorId, staffId, onBack }) => {
                     Appointment ID
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Patient
+                    Doctor
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date & Time
@@ -153,42 +172,39 @@ const DoctorAppointmentsView = ({ doctorId, staffId, onBack }) => {
                     </td>
                   </tr>
                 ) : (
-                  appointments.map((appointment) => {
-                    const patient = patientMap[appointment.patient_id];
-                    return (
-                      <tr key={appointment.appointment_id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {appointment.appointment_id}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {patient ? patient.name : `ID: ${appointment.patient_id}`}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDateTime(appointment.appointment_date)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeColor(
-                              appointment.status
-                            )}`}
-                          >
-                            {appointment.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">
-                          {appointment.notes || 'N/A'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button
-                            onClick={() => handleAppointmentClick(appointment)}
-                            className="text-blue-600 hover:text-blue-900 font-medium"
-                          >
-                            View Patient Tests
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })
+                  appointments.map((appointment) => (
+                    <tr key={appointment.appointment_id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {appointment.appointment_id}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {doctorMap[appointment.doctor_id] || `ID: ${appointment.doctor_id}`}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatDateTime(appointment.appointment_date)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeColor(
+                            appointment.status
+                          )}`}
+                        >
+                          {appointment.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {appointment.notes || 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button
+                          onClick={() => handleAppointmentClick(appointment)}
+                          className="text-blue-600 hover:text-blue-900 font-medium"
+                        >
+                          View Tests & Reports
+                        </button>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
@@ -199,5 +215,5 @@ const DoctorAppointmentsView = ({ doctorId, staffId, onBack }) => {
   );
 };
 
-export default DoctorAppointmentsView;
+export default PatientAppointmentsView;
 
