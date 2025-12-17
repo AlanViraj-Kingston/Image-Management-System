@@ -1,6 +1,6 @@
 # Swagger API Documentation Guide
 
-This guide explains how to access and use the Swagger/OpenAPI documentation for all services in the Medical Image Management System.
+This guide explains how to access and use the Swagger/OpenAPI documentation for all services in HealthBridge.
 
 ## Quick Access
 

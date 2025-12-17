@@ -1,6 +1,6 @@
-# Medical Image Management System - Client
+# HealthBridge - Client
 
-A modern React-based frontend application for the Medical Image Management System, designed for hospitals to manage medical images, patient records, and workflows.
+A modern React-based frontend application for HealthBridge, designed for hospitals to manage medical images, patient records, and workflows.
 
 ## Features
 

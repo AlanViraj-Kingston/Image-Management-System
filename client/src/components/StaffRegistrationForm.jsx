@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
+import { toast } from 'react-toastify';
 
 const StaffRegistrationForm = () => {
   const navigate = useNavigate();
@@ -43,13 +44,17 @@ const StaffRegistrationForm = () => {
 
     // Validation
     if (!formData.name.trim()) {
-      setError('Name is required');
+      const errorMsg = 'Name is required';
+      setError(errorMsg);
+      toast.error(errorMsg);
       setLoading(false);
       return;
     }
 
     if (!formData.email.trim()) {
-      setError('Email is required');
+      const errorMsg = 'Email is required';
+      setError(errorMsg);
+      toast.error(errorMsg);
       setLoading(false);
       return;
     }
@@ -57,37 +62,49 @@ const StaffRegistrationForm = () => {
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      setError('Please enter a valid email address');
+      const errorMsg = 'Please enter a valid email address';
+      setError(errorMsg);
+      toast.error(errorMsg);
       setLoading(false);
       return;
     }
 
     if (!formData.password) {
-      setError('Password is required');
+      const errorMsg = 'Password is required';
+      setError(errorMsg);
+      toast.error(errorMsg);
       setLoading(false);
       return;
     }
 
     if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
+      const errorMsg = 'Password must be at least 6 characters long';
+      setError(errorMsg);
+      toast.error(errorMsg);
       setLoading(false);
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      const errorMsg = 'Passwords do not match';
+      setError(errorMsg);
+      toast.error(errorMsg);
       setLoading(false);
       return;
     }
 
     if (!formData.department.trim()) {
-      setError('Department is required');
+      const errorMsg = 'Department is required';
+      setError(errorMsg);
+      toast.error(errorMsg);
       setLoading(false);
       return;
     }
 
     if (!formData.role) {
-      setError('Please select a role');
+      const errorMsg = 'Please select a role';
+      setError(errorMsg);
+      toast.error(errorMsg);
       setLoading(false);
       return;
     }
@@ -105,6 +122,7 @@ const StaffRegistrationForm = () => {
 
       const response = await authService.registerStaff(registrationData);
       setSuccess(true);
+      toast.success('Registration successful! Redirecting to login...');
 
       // Redirect to login after 2 seconds
       setTimeout(() => {
@@ -115,11 +133,11 @@ const StaffRegistrationForm = () => {
         });
       }, 2000);
     } catch (err) {
-      setError(
-        err.detail ||
-          err.message ||
-          'Registration failed. Please try again.'
-      );
+      const errorMsg = err.detail ||
+        err.message ||
+        'Registration failed. Please try again.';
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }

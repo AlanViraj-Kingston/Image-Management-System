@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
 app = FastAPI(
-    title="Medical Image Management System - API Gateway",
+    title="HealthBridge - API Gateway",
     description="Central gateway to access all microservices",
     version="1.0.0"
 )
@@ -57,7 +57,7 @@ def gateway_home():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Medical Image Management System - API Gateway</title>
+        <title>HealthBridge - API Gateway</title>
         <style>
             body {
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -180,7 +180,7 @@ def gateway_home():
     </head>
     <body>
         <div class="container">
-            <h1>🏥 Medical Image Management System</h1>
+            <h1>🏥 HealthBridge</h1>
             <p class="subtitle">API Gateway - Access all microservices documentation</p>
             
             <div class="services-grid">

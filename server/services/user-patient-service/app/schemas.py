@@ -34,6 +34,14 @@ class PatientCreate(UserWithPassword):
     date_of_birth: date
     conditions: Optional[str] = None
 
+class PatientUpdate(BaseModel):
+    """Schema for patient update - excludes password and email"""
+    name: str
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    date_of_birth: date
+    conditions: Optional[str] = None
+
 class PatientResponse(UserResponse):
     patient_id: int
     date_of_birth: Optional[date] = None

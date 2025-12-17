@@ -163,6 +163,27 @@ def register_patient(patient: schemas.PatientCreate, db: Session = Depends(get_d
     db.refresh(new_patient)
     return new_patient
 
+@router.get("/patients/user/{user_id}", response_model=schemas.PatientResponse)
+def get_patient_by_user_id(user_id: int, db: Session = Depends(get_db)):
+    """Get patient information by user_id"""
+    # First check if user exists
+    user = db.query(models.User).filter(models.User.user_id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if user is a patient
+    if user.user_type != models.UserType.PATIENT:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"User with ID {user_id} is not a patient"
+        )
+    
+    # Get patient record
+    patient = db.query(models.Patient).filter(models.Patient.user_id == user_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient record not found")
+    return patient
+
 @router.get("/patients/{patient_id}", response_model=schemas.PatientResponse)
 def get_patient_info(patient_id: int, db: Session = Depends(get_db)):
     """Get patient information"""
@@ -177,7 +198,7 @@ def get_all_patients(db: Session = Depends(get_db)):
     return db.query(models.Patient).all()
 
 @router.put("/patients/{patient_id}", response_model=schemas.PatientResponse)
-def update_patient_info(patient_id: int, patient_update: schemas.PatientCreate, db: Session = Depends(get_db)):
+def update_patient_info(patient_id: int, patient_update: schemas.PatientUpdate, db: Session = Depends(get_db)):
     """Update patient information"""
     patient = db.query(models.Patient).filter(models.Patient.patient_id == patient_id).first()
     if not patient:

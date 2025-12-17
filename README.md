@@ -1,4 +1,4 @@
-# Medical Image Management System
+# HealthBridge
 
 A comprehensive healthcare management system built with a microservices architecture for managing medical images, patient records, diagnoses, workflows, and billing. This system demonstrates Service-Oriented Architecture (SOA) principles with a modern React frontend and FastAPI backend services.
 
@@ -18,7 +18,7 @@ A comprehensive healthcare management system built with a microservices architec
 
 ## 🎯 Overview
 
-The Medical Image Management System is designed for hospitals and healthcare facilities to:
+HealthBridge is designed for hospitals and healthcare facilities to:
 - Manage patient and medical staff registrations
 - Upload and store medical images (X-Ray, MRI, CT, Ultrasound)
 - Generate and manage diagnosis reports

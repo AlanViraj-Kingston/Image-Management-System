@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { toast } from 'react-toastify';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
@@ -16,7 +16,7 @@ const LoginPage = () => {
   useEffect(() => {
     // Check for success message from registration
     if (location.state?.message) {
-      setSuccessMessage(location.state.message);
+      toast.success(location.state.message);
       // Clear the state to prevent showing message on refresh
       window.history.replaceState({}, document.title);
     }
@@ -29,7 +29,9 @@ const LoginPage = () => {
 
     // Validation
     if (!email || !password) {
-      setError('Please enter both email and password');
+      const errorMsg = 'Please enter both email and password';
+      setError(errorMsg);
+      toast.error(errorMsg);
       setLoading(false);
       return;
     }
@@ -37,21 +39,24 @@ const LoginPage = () => {
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setError('Please enter a valid email address');
+      const errorMsg = 'Please enter a valid email address';
+      setError(errorMsg);
+      toast.error(errorMsg);
       setLoading(false);
       return;
     }
 
     try {
       await login(email.trim().toLowerCase(), password);
+      toast.success('Login successful! Welcome back.');
       // Redirect based on user type
       navigate('/dashboard');
     } catch (err) {
-      setError(
-        err.detail || 
+      const errorMsg = err.detail || 
         err.message || 
-        'Invalid email or password. Please check your credentials.'
-      );
+        'Invalid email or password. Please check your credentials.';
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -81,7 +86,7 @@ const LoginPage = () => {
             </div>
           </div>
           <h2 className="text-4xl font-bold text-gray-900 mb-2">
-            Medical Image Management System
+            HealthBridge
           </h2>
           <p className="text-gray-600 text-lg">
             Secure access for patients and medical staff
@@ -91,30 +96,6 @@ const LoginPage = () => {
         {/* Login Card */}
         <div className="card">
           <form className="space-y-6" onSubmit={handleSubmit}>
-            {/* Success Message */}
-            {successMessage && (
-              <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg
-                      className="h-5 w-5 text-green-500"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm text-green-700">{successMessage}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Error Message */}
             {error && (
               <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
@@ -360,7 +341,7 @@ const LoginPage = () => {
 
         {/* Footer */}
         <div className="text-center text-sm text-gray-500">
-          <p>© 2024 Medical Image Management System. All rights reserved.</p>
+          <p>© 2024 HealthBridge. All rights reserved.</p>
         </div>
       </div>
     </div>

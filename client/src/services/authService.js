@@ -91,5 +91,48 @@ export const authService = {
       throw error.response?.data || error.message;
     }
   },
+
+  /**
+   * Get patient information by user_id
+   * @param {number} userId - User ID
+   * @returns {Promise} Patient data
+   */
+  async getPatientByUserId(userId) {
+    try {
+      const response = await api.get(`/api/v1/patients/user/${userId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Get patient information by patient_id
+   * @param {number} patientId - Patient ID
+   * @returns {Promise} Patient data
+   */
+  async getPatientById(patientId) {
+    try {
+      const response = await api.get(`/api/v1/patients/${patientId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Update patient information
+   * @param {number} patientId - Patient ID
+   * @param {Object} patientData - Patient update data (name, phone, address, date_of_birth, conditions)
+   * @returns {Promise} Updated patient data
+   */
+  async updatePatient(patientId, patientData) {
+    try {
+      const response = await api.put(`/api/v1/patients/${patientId}`, patientData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 

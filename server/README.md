@@ -1,4 +1,4 @@
-# Medical Image Management System
+# HealthBridge
 
 A service-oriented architecture (SOA) implementation for managing medical images, diagnoses, workflows, and billing in a healthcare system.
 
