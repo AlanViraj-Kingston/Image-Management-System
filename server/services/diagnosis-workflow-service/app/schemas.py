@@ -9,11 +9,13 @@ class DiagnosisReportCreate(BaseModel):
     image_id: Optional[int] = None
     findings: Optional[str] = None
     diagnosis: Optional[str] = None
+    recommendations: Optional[str] = None
     status: ReportStatus = ReportStatus.PENDING
 
 class DiagnosisReportUpdate(BaseModel):
     findings: Optional[str] = None
     diagnosis: Optional[str] = None
+    recommendations: Optional[str] = None
     status: Optional[ReportStatus] = None
 
 class DiagnosisReportResponse(BaseModel):
@@ -23,6 +25,7 @@ class DiagnosisReportResponse(BaseModel):
     image_id: Optional[int] = None
     findings: Optional[str] = None
     diagnosis: Optional[str] = None
+    recommendations: Optional[str] = None
     status: ReportStatus
     updated_date: Optional[datetime] = None
 
@@ -110,5 +113,6 @@ class AppointmentResponse(BaseModel):
 class ReportGenerateRequest(BaseModel):
     findings: Optional[str] = None
     diagnosis: Optional[str] = None
+    recommendations: Optional[str] = None
 
 

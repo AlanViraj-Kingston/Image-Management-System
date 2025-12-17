@@ -233,6 +233,8 @@ def generate_report_for_test(
                 report.findings = report_data.findings
             if report_data.diagnosis is not None:
                 report.diagnosis = report_data.diagnosis
+            if report_data.recommendations is not None:
+                report.recommendations = report_data.recommendations
             report.status = models.ReportStatus.FINALIZED
             report.updated_date = datetime.utcnow()
             db.commit()
@@ -245,7 +247,8 @@ def generate_report_for_test(
             image_id=test.image_id,
             findings=report_data.findings,
             diagnosis=report_data.diagnosis,
-            status=models.ReportStatus.FINALIZED if (report_data.findings or report_data.diagnosis) else models.ReportStatus.PENDING,
+            recommendations=report_data.recommendations,
+            status=models.ReportStatus.FINALIZED if (report_data.findings or report_data.diagnosis or report_data.recommendations) else models.ReportStatus.PENDING,
             updated_date=datetime.utcnow()
         )
         db.add(report)
@@ -287,6 +290,7 @@ def generate_report(report: schemas.DiagnosisReportCreate, db: Session = Depends
         image_id=report.image_id,
         findings=report.findings,
         diagnosis=report.diagnosis,
+        recommendations=report.recommendations,
         status=report.status,
         updated_date=datetime.utcnow()
     )
@@ -398,6 +402,8 @@ def update_report(
         report.findings = report_update.findings
     if report_update.diagnosis is not None:
         report.diagnosis = report_update.diagnosis
+    if report_update.recommendations is not None:
+        report.recommendations = report_update.recommendations
     if report_update.status is not None:
         report.status = report_update.status
     

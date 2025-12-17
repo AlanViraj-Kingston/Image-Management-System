@@ -26,6 +26,7 @@ const PatientTestView = ({ patient, doctorId, appointmentId, onBack }) => {
   const [reportFormData, setReportFormData] = useState({
     findings: '',
     diagnosis: '',
+    recommendations: '',
   });
   const [formData, setFormData] = useState({
     test_type: SCAN_TYPES.ABDOMINAL_ULTRASOUND,
@@ -42,7 +43,7 @@ const PatientTestView = ({ patient, doctorId, appointmentId, onBack }) => {
     fetchRadiologists();
     fetchPatientDetails();
     fetchDoctorName();
-  }, [patient.patient_id, doctorId]);
+  }, [patient.patient_id, doctorId, appointmentId]);
 
   useEffect(() => {
     // Fetch reports for tests that have report_id
@@ -92,7 +93,14 @@ const PatientTestView = ({ patient, doctorId, appointmentId, onBack }) => {
     try {
       setLoading(true);
       setError('');
-      const data = await testService.getPatientTests(patient.patient_id);
+      // If appointmentId is provided, fetch tests for that specific appointment
+      // Otherwise, fetch all tests for the patient
+      let data;
+      if (appointmentId) {
+        data = await testService.getAppointmentTests(appointmentId);
+      } else {
+        data = await testService.getPatientTests(patient.patient_id);
+      }
       setTests(data || []);
     } catch (err) {
       setError(err.detail || err.message || 'Failed to load tests');
@@ -186,6 +194,7 @@ const PatientTestView = ({ patient, doctorId, appointmentId, onBack }) => {
     setReportFormData({
       findings: '',
       diagnosis: '',
+      recommendations: '',
     });
     setShowReportForm(true);
   };
@@ -199,11 +208,12 @@ const PatientTestView = ({ patient, doctorId, appointmentId, onBack }) => {
       await testService.generateReport(reportingTest.test_id, {
         findings: reportFormData.findings,
         diagnosis: reportFormData.diagnosis,
+        recommendations: reportFormData.recommendations,
       });
       toast.success('Report generated successfully!');
       setShowReportForm(false);
       setReportingTest(null);
-      setReportFormData({ findings: '', diagnosis: '' });
+      setReportFormData({ findings: '', diagnosis: '', recommendations: '' });
       fetchTests();
     } catch (err) {
       toast.error(err.detail || err.message || 'Failed to generate report');
@@ -372,6 +382,30 @@ const PatientTestView = ({ patient, doctorId, appointmentId, onBack }) => {
         pdf.text(line, margin, yPos);
         yPos += 7;
       });
+      yPos += 10;
+
+      // Recommendations Section
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      if (yPos > pageHeight - 40) {
+        pdf.addPage();
+        yPos = margin;
+      }
+      pdf.text('Recommendations', margin, yPos);
+      yPos += 10;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      const recommendations = report.recommendations || 'No recommendations provided.';
+      const recommendationsLines = pdf.splitTextToSize(recommendations, pageWidth - 2 * margin);
+      recommendationsLines.forEach((line) => {
+        if (yPos > pageHeight - 30) {
+          pdf.addPage();
+          yPos = margin;
+        }
+        pdf.text(line, margin, yPos);
+        yPos += 7;
+      });
 
       // Footer
       const totalPages = pdf.internal.pages.length - 1;
@@ -460,39 +494,43 @@ const PatientTestView = ({ patient, doctorId, appointmentId, onBack }) => {
   };
 
   return (
-    <div className="card max-w-full">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Patient Tests</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            {patient.name} (ID: {patient.patient_id})
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowCreateForm(!showCreateForm)}
-            className="btn-primary flex items-center"
-          >
-            <svg
-              className="w-5 h-5 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="flex items-center justify-between mb-6 gap-4">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-2xl font-bold text-gray-900">Patient Tests</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              {patient.name} (ID: {patient.patient_id})
+            </p>
+          </div>
+          <div className="flex gap-2 flex-shrink-0">
+            <button
+              onClick={() => setShowCreateForm(!showCreateForm)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center whitespace-nowrap"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            Create Test
-          </button>
-          <button onClick={onBack} className="btn-secondary">
-            Back
-          </button>
+              <svg
+                className="w-5 h-5 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              Create Test
+            </button>
+            <button 
+              onClick={onBack} 
+              className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors whitespace-nowrap"
+            >
+              Back
+            </button>
+          </div>
         </div>
-      </div>
 
       {error && (
         <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded mb-4">
@@ -710,6 +748,7 @@ const PatientTestView = ({ patient, doctorId, appointmentId, onBack }) => {
                                 setReportFormData({
                                   findings: report.findings || '',
                                   diagnosis: report.diagnosis || '',
+                                  recommendations: report.recommendations || '',
                                 });
                                 setShowReportForm(true);
                               }
@@ -868,6 +907,20 @@ const PatientTestView = ({ patient, doctorId, appointmentId, onBack }) => {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Recommendations
+                </label>
+                <textarea
+                  value={reportFormData.recommendations}
+                  onChange={(e) => setReportFormData({ ...reportFormData, recommendations: e.target.value })}
+                  className="input-field"
+                  rows={6}
+                  placeholder="Enter recommendations for the patient..."
+                  disabled={generatingReport}
+                />
+              </div>
+
               <div className="flex gap-2 pt-4">
                 <button
                   type="submit"
@@ -885,7 +938,7 @@ const PatientTestView = ({ patient, doctorId, appointmentId, onBack }) => {
                   onClick={() => {
                     setShowReportForm(false);
                     setReportingTest(null);
-                    setReportFormData({ findings: '', diagnosis: '' });
+                    setReportFormData({ findings: '', diagnosis: '', recommendations: '' });
                   }}
                   className="btn-secondary flex-1"
                   disabled={generatingReport}
@@ -897,6 +950,7 @@ const PatientTestView = ({ patient, doctorId, appointmentId, onBack }) => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

@@ -249,6 +249,30 @@ const PatientAppointmentDetailsView = ({ appointment, patientInfo, doctorName, o
         pdf.text(line, margin, yPos);
         yPos += 7;
       });
+      yPos += 10;
+
+      // Recommendations Section
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      if (yPos > pageHeight - 40) {
+        pdf.addPage();
+        yPos = margin;
+      }
+      pdf.text('Recommendations', margin, yPos);
+      yPos += 10;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      const recommendations = report.recommendations || 'No recommendations provided.';
+      const recommendationsLines = pdf.splitTextToSize(recommendations, pageWidth - 2 * margin);
+      recommendationsLines.forEach((line) => {
+        if (yPos > pageHeight - 30) {
+          pdf.addPage();
+          yPos = margin;
+        }
+        pdf.text(line, margin, yPos);
+        yPos += 7;
+      });
 
       // Footer
       const totalPages = pdf.internal.pages.length - 1;

@@ -31,6 +31,7 @@ class DiagnosisReport(Base):
     image_id = Column(Integer, nullable=True)  # Optional, can be null
     findings = Column(String, nullable=True)
     diagnosis = Column(String, nullable=True)
+    recommendations = Column(String, nullable=True)
     status = Column(SQLEnum(ReportStatus), default=ReportStatus.PENDING, nullable=False)
     updated_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
