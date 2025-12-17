@@ -126,3 +126,74 @@ def delete_billing(billing_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Billing deleted successfully", "billing_id": billing_id}
 
+@router.get("/billing/statistics/summary")
+def get_billing_statistics(db: Session = Depends(get_db)):
+    """Get billing statistics summary"""
+    all_billings = db.query(models.BillingDetails).all()
+    
+    total_paid = sum(
+        billing.base_cost for billing in all_billings 
+        if billing.status == models.BillingStatus.PAID
+    )
+    
+    total_unpaid = sum(
+        billing.base_cost for billing in all_billings 
+        if billing.status in [models.BillingStatus.UNPAID, models.BillingStatus.PENDING]
+    )
+    
+    return {
+        "total_paid": total_paid,
+        "total_unpaid": total_unpaid,
+        "total_billings": len(all_billings),
+        "paid_count": sum(1 for b in all_billings if b.status == models.BillingStatus.PAID),
+        "unpaid_count": sum(1 for b in all_billings if b.status in [models.BillingStatus.UNPAID, models.BillingStatus.PENDING])
+    }
+
+@router.get("/billing/statistics/monthly-revenue")
+def get_monthly_revenue(
+    year: int = None,
+    db: Session = Depends(get_db)
+):
+    """Get monthly revenue (paid amounts) for a specific year or current year"""
+    from datetime import datetime
+    from calendar import monthrange
+    
+    if year is None:
+        year = datetime.now().year
+    
+    # Get all paid billings
+    paid_billings = db.query(models.BillingDetails).filter(
+        models.BillingDetails.status == models.BillingStatus.PAID
+    ).all()
+    
+    # Group by month
+    monthly_data = {}
+    for month in range(1, 13):
+        monthly_data[month] = 0.0
+    
+    for billing in paid_billings:
+        if billing.created_at and billing.created_at.year == year:
+            month = billing.created_at.month
+            monthly_data[month] += billing.base_cost
+    
+    # Format as list of objects with month names
+    month_names = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ]
+    
+    revenue_data = [
+        {
+            "month": month_names[i],
+            "month_number": i + 1,
+            "revenue": monthly_data[i + 1]
+        }
+        for i in range(12)
+    ]
+    
+    return {
+        "year": year,
+        "monthly_revenue": revenue_data,
+        "total_revenue": sum(monthly_data.values())
+    }
+

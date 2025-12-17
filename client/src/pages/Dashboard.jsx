@@ -9,6 +9,7 @@ import DoctorAppointmentsView from '../components/DoctorAppointmentsView';
 import PatientAppointmentsView from '../components/PatientAppointmentsView';
 import PaymentsView from '../components/PaymentsView';
 import PatientPaymentsView from '../components/PatientPaymentsView';
+import AdminDashboard from '../components/AdminDashboard';
 import { authService } from '../services/authService';
 
 const Dashboard = () => {
@@ -36,6 +37,7 @@ const Dashboard = () => {
   const isRadiologist = staffRole === 'radiologist';
   const isDoctor = staffRole === 'doctor';
   const isClerk = staffRole === 'clerk';
+  const isAdmin = staffRole === 'admin';
   
   // Debug logging
   if (isStaff && staffInfo) {
@@ -95,6 +97,48 @@ const Dashboard = () => {
 
   if (!user) {
     return null;
+  }
+
+  // Show admin dashboard with sidebar
+  if (isAdmin) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        {/* Header */}
+        <header className="bg-white shadow-sm">
+          <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center">
+                <div className="bg-primary-100 p-2 rounded-lg mr-3">
+                  <svg
+                    className="w-6 h-6 text-primary-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                    />
+                  </svg>
+                </div>
+                <h1 className="text-xl font-bold text-gray-900">HealthBridge</h1>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Admin Dashboard with Sidebar */}
+        <AdminDashboard />
+      </div>
+    );
   }
 
   return (

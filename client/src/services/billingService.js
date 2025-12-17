@@ -138,6 +138,36 @@ export const billingService = {
       throw error.response?.data || error.message;
     }
   },
+
+  /**
+   * Get billing statistics summary
+   * @returns {Promise} Statistics data
+   */
+  async getBillingStatistics() {
+    try {
+      const response = await billingApi.get('/api/v1/billing/statistics/summary');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Get monthly revenue data
+   * @param {number} year - Optional year (defaults to current year)
+   * @returns {Promise} Monthly revenue data
+   */
+  async getMonthlyRevenue(year = null) {
+    try {
+      const url = year 
+        ? `/api/v1/billing/statistics/monthly-revenue?year=${year}`
+        : '/api/v1/billing/statistics/monthly-revenue';
+      const response = await billingApi.get(url);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
 // Billing status constants

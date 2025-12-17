@@ -189,5 +189,33 @@ export const authService = {
       throw error.response?.data || error.message;
     }
   },
+
+  /**
+   * Activate a user account
+   * @param {number} userId - User ID
+   * @returns {Promise} Activation response
+   */
+  async activateUser(userId) {
+    try {
+      const response = await api.put(`/api/v1/users/${userId}/activate`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Deactivate a user account
+   * @param {number} userId - User ID
+   * @returns {Promise} Deactivation response
+   */
+  async deactivateUser(userId) {
+    try {
+      const response = await api.put(`/api/v1/users/${userId}/deactivate`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 

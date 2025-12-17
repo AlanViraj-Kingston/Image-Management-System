@@ -95,7 +95,8 @@ def activate_user(user_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
     user.is_active = True
     db.commit()
-    return {"message": "User activated", "user_id": user_id}
+    db.refresh(user)
+    return {"message": "User activated", "user_id": user_id, "is_active": user.is_active}
 
 @router.put("/users/{user_id}/deactivate")
 def deactivate_user(user_id: int, db: Session = Depends(get_db)):
@@ -105,7 +106,8 @@ def deactivate_user(user_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
     user.is_active = False
     db.commit()
-    return {"message": "User deactivated", "user_id": user_id}
+    db.refresh(user)
+    return {"message": "User deactivated", "user_id": user_id, "is_active": user.is_active}
 
 # ============ PATIENT ROUTES ============
 # Patient inherits from User (abstract class). Registration creates both User and Patient records.
