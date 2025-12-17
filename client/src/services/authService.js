@@ -1,0 +1,95 @@
+import api from './api';
+
+export const authService = {
+  /**
+   * Login user with email and password
+   * @param {string} email - User email
+   * @param {string} password - User password
+   * @returns {Promise} Login response with token and user data
+   */
+  async login(email, password) {
+    try {
+      const response = await api.post('/api/v1/users/login', {
+        email: email,
+        password: password,
+      });
+      
+      // Store token and user data
+      if (response.data.access_token) {
+        localStorage.setItem('access_token', response.data.access_token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+      }
+      
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Get current authenticated user
+   * @returns {Promise} User data
+   */
+  async getCurrentUser() {
+    try {
+      const response = await api.get('/api/v1/users/me');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Logout user
+   */
+  logout() {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user');
+  },
+
+  /**
+   * Check if user is authenticated
+   * @returns {boolean}
+   */
+  isAuthenticated() {
+    return !!localStorage.getItem('access_token');
+  },
+
+  /**
+   * Get stored user data
+   * @returns {Object|null}
+   */
+  getStoredUser() {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
+  },
+
+  /**
+   * Register a new patient
+   * @param {Object} patientData - Patient registration data
+   * @returns {Promise} Patient response
+   */
+  async registerPatient(patientData) {
+    try {
+      const response = await api.post('/api/v1/patients/', patientData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Register a new medical staff member
+   * @param {Object} staffData - Staff registration data
+   * @returns {Promise} Staff response
+   */
+  async registerStaff(staffData) {
+    try {
+      const response = await api.post('/api/v1/staff/', staffData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+};
+
