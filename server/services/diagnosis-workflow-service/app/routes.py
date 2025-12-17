@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models, schemas
@@ -145,31 +145,59 @@ def update_test(
     return test
 
 @router.post("/tests/{test_id}/generate-report", response_model=schemas.MedicalTestResponse)
-def generate_report_for_test(test_id: int, db: Session = Depends(get_db)):
-    """Generate a report ID for a test"""
+def generate_report_for_test(
+    test_id: int,
+    report_data: schemas.ReportGenerateRequest = Body(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Generate a diagnosis report for a test with findings and diagnosis.
+    
+    - **test_id**: ID of the test
+    - **findings**: Findings from the scan (optional)
+    - **diagnosis**: Diagnosis based on the scan (optional)
+    """
     test = db.query(models.MedicalTest).filter(
         models.MedicalTest.test_id == test_id
     ).first()
     if not test:
         raise HTTPException(status_code=404, detail="Test not found")
     
-    # Create a diagnosis report
-    report = models.DiagnosisReport(
-        patient_id=test.patient_id,
-        staff_id=test.doctor_id,
-        image_id=test.image_id,
-        status=models.ReportStatus.PENDING,
-        updated_date=datetime.utcnow()
-    )
-    db.add(report)
-    db.commit()
-    db.refresh(report)
-    
-    # Update test with report_id
-    test.report_id = report.report_id
-    test.updated_date = datetime.utcnow()
-    db.commit()
-    db.refresh(test)
+    # Check if report already exists
+    if test.report_id:
+        # Update existing report
+        report = db.query(models.DiagnosisReport).filter(
+            models.DiagnosisReport.report_id == test.report_id
+        ).first()
+        if report:
+            if report_data.findings is not None:
+                report.findings = report_data.findings
+            if report_data.diagnosis is not None:
+                report.diagnosis = report_data.diagnosis
+            report.status = models.ReportStatus.FINALIZED
+            report.updated_date = datetime.utcnow()
+            db.commit()
+            db.refresh(report)
+    else:
+        # Create a new diagnosis report
+        report = models.DiagnosisReport(
+            patient_id=test.patient_id,
+            staff_id=test.doctor_id,
+            image_id=test.image_id,
+            findings=report_data.findings,
+            diagnosis=report_data.diagnosis,
+            status=models.ReportStatus.FINALIZED if (report_data.findings or report_data.diagnosis) else models.ReportStatus.PENDING,
+            updated_date=datetime.utcnow()
+        )
+        db.add(report)
+        db.commit()
+        db.refresh(report)
+        
+        # Update test with report_id
+        test.report_id = report.report_id
+        test.updated_date = datetime.utcnow()
+        db.commit()
+        db.refresh(test)
     
     # Log the action
     log_action = models.WorkflowLog(

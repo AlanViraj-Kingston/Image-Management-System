@@ -111,11 +111,26 @@ export const testService = {
   /**
    * Generate report for a test
    * @param {number} testId - Test ID
+   * @param {Object} reportData - Report data with findings and diagnosis
    * @returns {Promise} Test with report ID
    */
-  async generateReport(testId) {
+  async generateReport(testId, reportData = {}) {
     try {
-      const response = await testApi.post(`/api/v1/tests/${testId}/generate-report`);
+      const response = await testApi.post(`/api/v1/tests/${testId}/generate-report`, reportData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Get a diagnosis report by ID
+   * @param {number} reportId - Report ID
+   * @returns {Promise} Report data
+   */
+  async getReport(reportId) {
+    try {
+      const response = await testApi.get(`/api/v1/reports/${reportId}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

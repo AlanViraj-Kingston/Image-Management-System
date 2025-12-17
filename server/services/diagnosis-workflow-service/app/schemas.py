@@ -73,4 +73,8 @@ class MedicalTestResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class ReportGenerateRequest(BaseModel):
+    findings: Optional[str] = None
+    diagnosis: Optional[str] = None
+
 

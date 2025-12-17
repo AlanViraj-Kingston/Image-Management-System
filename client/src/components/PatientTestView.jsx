@@ -3,6 +3,7 @@ import { testService, SCAN_TYPES, TEST_STATUS } from '../services/testService';
 import { authService } from '../services/authService';
 import { imageService } from '../services/imageService';
 import { toast } from 'react-toastify';
+import jsPDF from 'jspdf';
 
 const PatientTestView = ({ patient, doctorId, onBack }) => {
   const [tests, setTests] = useState([]);
@@ -16,6 +17,16 @@ const PatientTestView = ({ patient, doctorId, onBack }) => {
   const [creating, setCreating] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [imageUrls, setImageUrls] = useState({});
+  const [reports, setReports] = useState({});
+  const [showReportForm, setShowReportForm] = useState(false);
+  const [reportingTest, setReportingTest] = useState(null);
+  const [generatingReport, setGeneratingReport] = useState(false);
+  const [patientDetails, setPatientDetails] = useState(null);
+  const [doctorName, setDoctorName] = useState('');
+  const [reportFormData, setReportFormData] = useState({
+    findings: '',
+    diagnosis: '',
+  });
   const [formData, setFormData] = useState({
     test_type: SCAN_TYPES.ABDOMINAL_ULTRASOUND,
     radiologist_id: '',
@@ -29,7 +40,31 @@ const PatientTestView = ({ patient, doctorId, onBack }) => {
   useEffect(() => {
     fetchTests();
     fetchRadiologists();
-  }, [patient.patient_id]);
+    fetchPatientDetails();
+    fetchDoctorName();
+  }, [patient.patient_id, doctorId]);
+
+  useEffect(() => {
+    // Fetch reports for tests that have report_id
+    const fetchReports = async () => {
+      const reportMap = {};
+      for (const test of tests) {
+        if (test.report_id) {
+          try {
+            const reportData = await testService.getReport(test.report_id);
+            reportMap[test.test_id] = reportData;
+          } catch (err) {
+            console.error(`Failed to get report for test ${test.test_id}:`, err);
+          }
+        }
+      }
+      setReports(reportMap);
+    };
+
+    if (tests.length > 0) {
+      fetchReports();
+    }
+  }, [tests]);
 
   useEffect(() => {
     // Fetch image URLs for tests that have images
@@ -85,6 +120,35 @@ const PatientTestView = ({ patient, doctorId, onBack }) => {
     }
   };
 
+  const fetchPatientDetails = async () => {
+    try {
+      const data = await authService.getPatientById(patient.patient_id);
+      setPatientDetails(data);
+    } catch (err) {
+      console.error('Failed to load patient details:', err);
+    }
+  };
+
+  const fetchDoctorName = async () => {
+    try {
+      // Get doctor info by user_id
+      const staffInfo = await authService.getStaffByUserId(doctorId);
+      if (staffInfo) {
+        // Get all staff to find the doctor by staff_id
+        const allStaff = await authService.getAllStaff();
+        const doctor = allStaff.find(s => s.staff_id === staffInfo.staff_id);
+        if (doctor) {
+          setDoctorName(doctor.name);
+        } else {
+          // Fallback: use staffInfo name if available
+          setDoctorName(staffInfo.name || `ID: ${staffInfo.staff_id}`);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load doctor name:', err);
+    }
+  };
+
   const handleCreateTest = async (e) => {
     e.preventDefault();
     setError('');
@@ -116,13 +180,224 @@ const PatientTestView = ({ patient, doctorId, onBack }) => {
     }
   };
 
-  const handleGenerateReport = async (testId) => {
+  const handleGenerateReport = (test) => {
+    setReportingTest(test);
+    setReportFormData({
+      findings: '',
+      diagnosis: '',
+    });
+    setShowReportForm(true);
+  };
+
+  const handleSubmitReport = async (e) => {
+    e.preventDefault();
+    if (!reportingTest) return;
+
+    setGeneratingReport(true);
     try {
-      await testService.generateReport(testId);
+      await testService.generateReport(reportingTest.test_id, {
+        findings: reportFormData.findings,
+        diagnosis: reportFormData.diagnosis,
+      });
       toast.success('Report generated successfully!');
+      setShowReportForm(false);
+      setReportingTest(null);
+      setReportFormData({ findings: '', diagnosis: '' });
       fetchTests();
     } catch (err) {
       toast.error(err.detail || err.message || 'Failed to generate report');
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
+  const handleDownloadReport = async (test) => {
+    const report = reports[test.test_id];
+    if (!report) return;
+
+    try {
+      // Fetch patient details if not already loaded
+      let patientInfo = patientDetails;
+      if (!patientInfo) {
+        patientInfo = await authService.getPatientById(test.patient_id);
+      }
+
+      // Get doctor name if not loaded
+      let doctor = doctorName;
+      if (!doctor) {
+        const staffInfo = await authService.getStaffByUserId(doctorId);
+        if (staffInfo) {
+          const allStaff = await authService.getAllStaff();
+          const doctorStaff = allStaff.find(s => s.staff_id === staffInfo.staff_id);
+          if (doctorStaff) {
+            doctor = doctorStaff.name;
+          }
+        }
+      }
+
+      // Get radiologist name
+      const radiologistName = test.radiologist_id 
+        ? (radiologistMap[test.radiologist_id] || `ID: ${test.radiologist_id}`)
+        : 'Not assigned';
+
+      // Create PDF
+      const pdf = new jsPDF();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 20;
+      let yPos = margin;
+
+      // Header
+      pdf.setFillColor(66, 126, 234); // Blue color
+      pdf.rect(0, 0, pageWidth, 40, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(24);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('HealthBridge', margin, 25);
+      pdf.setFontSize(16);
+      pdf.text('Diagnosis Report', pageWidth - margin, 25, { align: 'right' });
+
+      // Reset text color
+      pdf.setTextColor(0, 0, 0);
+      yPos = 50;
+
+      // Report Information Section
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Report Information', margin, yPos);
+      yPos += 10;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      const reportDate = new Date(report.updated_date || Date.now()).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      pdf.text(`Report ID: ${report.report_id}`, margin, yPos);
+      pdf.text(`Date: ${reportDate}`, pageWidth - margin, yPos, { align: 'right' });
+      yPos += 8;
+      pdf.text(`Test ID: ${test.test_id}`, margin, yPos);
+      yPos += 15;
+
+      // Patient Information Section
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Patient Information', margin, yPos);
+      yPos += 10;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      if (patientInfo) {
+        pdf.text(`Name: ${patientInfo.name || 'N/A'}`, margin, yPos);
+        yPos += 7;
+        pdf.text(`Email: ${patientInfo.email || 'N/A'}`, margin, yPos);
+        yPos += 7;
+        pdf.text(`Phone: ${patientInfo.phone || 'N/A'}`, margin, yPos);
+        yPos += 7;
+        pdf.text(`Address: ${patientInfo.address || 'N/A'}`, margin, yPos);
+        yPos += 7;
+        pdf.text(`Medical Conditions: ${patientInfo.conditions || 'None recorded'}`, margin, yPos);
+      } else {
+        pdf.text(`Patient ID: ${test.patient_id}`, margin, yPos);
+      }
+      yPos += 15;
+
+      // Medical Staff Information Section
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Medical Staff Information', margin, yPos);
+      yPos += 10;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Doctor: ${doctor || `ID: ${report.staff_id}`}`, margin, yPos);
+      yPos += 7;
+      pdf.text(`Radiologist: ${radiologistName}`, margin, yPos);
+      yPos += 15;
+
+      // Scan Information Section
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Scan Information', margin, yPos);
+      yPos += 10;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Scan Type: ${test.test_type}`, margin, yPos);
+      yPos += 7;
+      pdf.text(`Status: ${test.status}`, margin, yPos);
+      yPos += 15;
+
+      // Findings Section
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Findings', margin, yPos);
+      yPos += 10;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      const findings = report.findings || 'No findings recorded.';
+      const findingsLines = pdf.splitTextToSize(findings, pageWidth - 2 * margin);
+      findingsLines.forEach((line) => {
+        if (yPos > pageHeight - 30) {
+          pdf.addPage();
+          yPos = margin;
+        }
+        pdf.text(line, margin, yPos);
+        yPos += 7;
+      });
+      yPos += 10;
+
+      // Diagnosis Section
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      if (yPos > pageHeight - 40) {
+        pdf.addPage();
+        yPos = margin;
+      }
+      pdf.text('Diagnosis', margin, yPos);
+      yPos += 10;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      const diagnosis = report.diagnosis || 'No diagnosis recorded.';
+      const diagnosisLines = pdf.splitTextToSize(diagnosis, pageWidth - 2 * margin);
+      diagnosisLines.forEach((line) => {
+        if (yPos > pageHeight - 30) {
+          pdf.addPage();
+          yPos = margin;
+        }
+        pdf.text(line, margin, yPos);
+        yPos += 7;
+      });
+
+      // Footer
+      const totalPages = pdf.internal.pages.length - 1;
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(8);
+        pdf.setTextColor(128, 128, 128);
+        pdf.text(
+          `Page ${i} of ${totalPages}`,
+          pageWidth / 2,
+          pageHeight - 10,
+          { align: 'center' }
+        );
+        pdf.text(
+          'HealthBridge - Medical Diagnosis Report',
+          pageWidth / 2,
+          pageHeight - 5,
+          { align: 'center' }
+        );
+      }
+
+      // Download PDF
+      pdf.save(`Diagnosis_Report_${report.report_id}_Test_${test.test_id}.pdf`);
+      toast.success('Report downloaded successfully!');
+    } catch (err) {
+      console.error('Failed to generate PDF:', err);
+      toast.error('Failed to generate PDF report');
     }
   };
 
@@ -416,16 +691,39 @@ const PatientTestView = ({ patient, doctorId, onBack }) => {
                       >
                         Edit
                       </button>
-                      {!test.report_id && (
+                      {!test.report_id && test.image_id && (
                         <button
-                          onClick={() => handleGenerateReport(test.test_id)}
+                          onClick={() => handleGenerateReport(test)}
                           className="text-blue-600 hover:text-blue-800 font-medium text-left"
                         >
                           Generate Report
                         </button>
                       )}
                       {test.report_id && (
-                        <span className="text-green-600 font-medium">Report: {test.report_id}</span>
+                        <div className="flex flex-col gap-1">
+                          <button
+                            onClick={() => {
+                              const report = reports[test.test_id];
+                              if (report) {
+                                setReportingTest(test);
+                                setReportFormData({
+                                  findings: report.findings || '',
+                                  diagnosis: report.diagnosis || '',
+                                });
+                                setShowReportForm(true);
+                              }
+                            }}
+                            className="text-green-600 hover:text-green-800 font-medium text-left"
+                          >
+                            View Report
+                          </button>
+                          <button
+                            onClick={() => handleDownloadReport(test)}
+                            className="text-purple-600 hover:text-purple-800 font-medium text-left text-xs"
+                          >
+                            Download
+                          </button>
+                        </div>
                       )}
                     </div>
                   </td>
@@ -519,6 +817,77 @@ const PatientTestView = ({ patient, doctorId, onBack }) => {
                   }}
                   className="btn-secondary flex-1"
                   disabled={updating}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Report Generation Modal */}
+      {showReportForm && reportingTest && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              {reportingTest.report_id ? 'View/Update Report' : 'Generate Diagnosis Report'}
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Test ID: {reportingTest.test_id} | Scan Type: {reportingTest.test_type}
+            </p>
+            <form onSubmit={handleSubmitReport} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Findings <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={reportFormData.findings}
+                  onChange={(e) => setReportFormData({ ...reportFormData, findings: e.target.value })}
+                  className="input-field"
+                  rows={6}
+                  placeholder="Enter findings from the scan..."
+                  required
+                  disabled={generatingReport}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Diagnosis <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={reportFormData.diagnosis}
+                  onChange={(e) => setReportFormData({ ...reportFormData, diagnosis: e.target.value })}
+                  className="input-field"
+                  rows={6}
+                  placeholder="Enter diagnosis based on the scan..."
+                  required
+                  disabled={generatingReport}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <button
+                  type="submit"
+                  disabled={generatingReport}
+                  className="btn-primary flex-1 disabled:opacity-50"
+                >
+                  {generatingReport
+                    ? 'Generating...'
+                    : reportingTest.report_id
+                    ? 'Update Report'
+                    : 'Generate Report'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowReportForm(false);
+                    setReportingTest(null);
+                    setReportFormData({ findings: '', diagnosis: '' });
+                  }}
+                  className="btn-secondary flex-1"
+                  disabled={generatingReport}
                 >
                   Cancel
                 </button>
