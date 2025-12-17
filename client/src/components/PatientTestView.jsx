@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { testService, SCAN_TYPES, TEST_STATUS } from '../services/testService';
 import { authService } from '../services/authService';
+import { imageService } from '../services/imageService';
 import { toast } from 'react-toastify';
 
 const PatientTestView = ({ patient, doctorId, onBack }) => {
@@ -14,6 +15,7 @@ const PatientTestView = ({ patient, doctorId, onBack }) => {
   const [loadingRadiologists, setLoadingRadiologists] = useState(false);
   const [creating, setCreating] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [imageUrls, setImageUrls] = useState({});
   const [formData, setFormData] = useState({
     test_type: SCAN_TYPES.ABDOMINAL_ULTRASOUND,
     radiologist_id: '',
@@ -28,6 +30,28 @@ const PatientTestView = ({ patient, doctorId, onBack }) => {
     fetchTests();
     fetchRadiologists();
   }, [patient.patient_id]);
+
+  useEffect(() => {
+    // Fetch image URLs for tests that have images
+    const fetchImageUrls = async () => {
+      const urls = {};
+      for (const test of tests) {
+        if (test.image_id) {
+          try {
+            const urlData = await imageService.getImageUrl(test.image_id);
+            urls[test.test_id] = urlData.presigned_url;
+          } catch (err) {
+            console.error(`Failed to get image URL for test ${test.test_id}:`, err);
+          }
+        }
+      }
+      setImageUrls(urls);
+    };
+
+    if (tests.length > 0) {
+      fetchImageUrls();
+    }
+  }, [tests]);
 
   const fetchTests = async () => {
     try {
@@ -322,7 +346,7 @@ const PatientTestView = ({ patient, doctorId, onBack }) => {
                   Report ID
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Image ID
+                  Scan Image
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Created Date
@@ -354,8 +378,30 @@ const PatientTestView = ({ patient, doctorId, onBack }) => {
                   <td className="px-6 py-4 text-sm text-gray-700">
                     {test.report_id || '—'}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-700">
-                    {test.image_id || '—'}
+                  <td className="px-6 py-4 text-sm">
+                    {test.image_id && imageUrls[test.test_id] ? (
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={imageUrls[test.test_id]}
+                          alt="Scan image"
+                          className="w-20 h-20 object-cover rounded border border-gray-300 cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => window.open(imageUrls[test.test_id], '_blank')}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            if (e.target.nextSibling) {
+                              e.target.nextSibling.style.display = 'block';
+                            }
+                          }}
+                        />
+                        <span className="text-gray-600 text-xs" style={{ display: 'none' }}>
+                          Image {test.image_id}
+                        </span>
+                      </div>
+                    ) : test.image_id ? (
+                      <span className="text-gray-600">Image ID: {test.image_id}</span>
+                    ) : (
+                      <span className="text-gray-400">No image</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-700">
                     {test.created_date
