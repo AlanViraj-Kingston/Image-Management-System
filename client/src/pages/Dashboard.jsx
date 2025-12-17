@@ -1,23 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import PatientDetails from '../components/PatientDetails';
+import { authService } from '../services/authService';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [activeView, setActiveView] = useState(null);
+  const [patients, setPatients] = useState([]);
+  const [patientsLoading, setPatientsLoading] = useState(false);
+  const [patientsError, setPatientsError] = useState('');
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  if (!user) {
-    return null;
-  }
-
-  const isPatient = user.user_type === 'patient';
+  const isPatient = user?.user_type === 'patient';
+  const isStaff = user?.user_type === 'staff';
 
   const handleCardClick = (view) => {
     setActiveView(view);
@@ -26,6 +27,31 @@ const Dashboard = () => {
   const handleBack = () => {
     setActiveView(null);
   };
+
+  useEffect(() => {
+    const fetchPatients = async () => {
+      setPatientsError('');
+      setPatientsLoading(true);
+      try {
+        const data = await authService.getAllPatients();
+        setPatients(data || []);
+      } catch (err) {
+        setPatientsError(
+          err.detail || err.message || 'Failed to load patients list'
+        );
+      } finally {
+        setPatientsLoading(false);
+      }
+    };
+
+    if (isStaff && activeView === 'patients' && patients.length === 0 && !patientsLoading) {
+      fetchPatients();
+    }
+  }, [activeView, isStaff, patients.length, patientsLoading]);
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -80,6 +106,126 @@ const Dashboard = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
         {isPatient && activeView === 'details' ? (
           <PatientDetails userId={user.user_id} onBack={handleBack} />
+        ) : isStaff && activeView === 'patients' ? (
+          <div className="card">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Patients</h2>
+              <button onClick={handleBack} className="btn-secondary">
+                Back
+              </button>
+            </div>
+
+            {patientsError && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded mb-4">
+                <p className="text-sm text-red-700">{patientsError}</p>
+              </div>
+            )}
+
+            {patientsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <svg
+                  className="animate-spin h-8 w-8 text-primary-600"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                <span className="ml-3 text-gray-600">Loading patients...</span>
+              </div>
+            ) : patients.length === 0 ? (
+              <div className="bg-gray-50 p-6 rounded-lg text-center text-gray-600">
+                No patients found.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Patient ID
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Name
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Email
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date of Birth
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Phone
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Address
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Conditions
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {patients.map((patient) => (
+                      <tr key={patient.patient_id || patient.user_id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                          {patient.patient_id || 'N/A'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {patient.name || 'N/A'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700">
+                          {patient.email || '—'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700">
+                          {patient.date_of_birth
+                            ? new Date(patient.date_of_birth).toLocaleDateString()
+                            : 'N/A'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700">
+                          {patient.phone || '—'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate" title={patient.address || ''}>
+                          {patient.address || '—'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700 max-w-xs">
+                          <div className="truncate" title={patient.conditions || ''}>
+                            {patient.conditions || '—'}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              patient.is_active
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}
+                          >
+                            {patient.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         ) : (
           <>
             <div className="card">
@@ -176,6 +322,37 @@ const Dashboard = () => {
                     </h3>
                     <p className="text-gray-600 text-sm">
                       View your billing history and payment information
+                    </p>
+                  </button>
+                </div>
+              ) : isStaff ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <button
+                    onClick={() => handleCardClick('patients')}
+                    className="bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-blue-500 hover:shadow-lg transition-all duration-200 cursor-pointer text-left group"
+                  >
+                    <div className="flex items-center mb-4">
+                      <div className="bg-blue-100 p-3 rounded-lg group-hover:bg-blue-200 transition-colors">
+                        <svg
+                          className="w-8 h-8 text-blue-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                      Patients
+                    </h3>
+                    <p className="text-gray-600 text-sm">
+                      View all patients and their medical details
                     </p>
                   </button>
                 </div>

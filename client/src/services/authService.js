@@ -134,5 +134,18 @@ export const authService = {
       throw error.response?.data || error.message;
     }
   },
+
+  /**
+   * Get all patients (staff/doctor view)
+   * @returns {Promise} Patient list
+   */
+  async getAllPatients() {
+    try {
+      const response = await api.get('/api/v1/patients/');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
