@@ -8,6 +8,7 @@ import AppointmentsView from '../components/AppointmentsView';
 import DoctorAppointmentsView from '../components/DoctorAppointmentsView';
 import PatientAppointmentsView from '../components/PatientAppointmentsView';
 import PaymentsView from '../components/PaymentsView';
+import PatientPaymentsView from '../components/PatientPaymentsView';
 import { authService } from '../services/authService';
 
 const Dashboard = () => {
@@ -151,6 +152,8 @@ const Dashboard = () => {
           <PatientDetails userId={user.user_id} onBack={handleBack} />
         ) : isPatient && activeView === 'appointments' ? (
           <PatientAppointmentsView patientId={user.user_id} onBack={handleBack} />
+        ) : isPatient && activeView === 'payments' ? (
+          <PatientPaymentsView patientId={user.user_id} onBack={handleBack} />
         ) : isRadiologist && activeView === 'tests' ? (
           <RadiologistTestsView
             radiologistId={staffInfo?.staff_id}
