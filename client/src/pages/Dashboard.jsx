@@ -2,15 +2,20 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import PatientDetails from '../components/PatientDetails';
+import PatientTestView from '../components/PatientTestView';
+import RadiologistTestsView from '../components/RadiologistTestsView';
 import { authService } from '../services/authService';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [activeView, setActiveView] = useState(null);
+  const [selectedPatient, setSelectedPatient] = useState(null);
   const [patients, setPatients] = useState([]);
   const [patientsLoading, setPatientsLoading] = useState(false);
   const [patientsError, setPatientsError] = useState('');
+  const [staffInfo, setStaffInfo] = useState(null);
+  const [loadingStaffInfo, setLoadingStaffInfo] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -19,6 +24,17 @@ const Dashboard = () => {
 
   const isPatient = user?.user_type === 'patient';
   const isStaff = user?.user_type === 'staff';
+  // Handle role as enum or string, convert to lowercase for comparison
+  const staffRoleRaw = staffInfo?.role;
+  const staffRole = staffRoleRaw?.value?.toLowerCase() 
+    || (typeof staffRoleRaw === 'string' ? staffRoleRaw.toLowerCase() : String(staffRoleRaw || '').toLowerCase());
+  const isRadiologist = staffRole === 'radiologist';
+  const isDoctor = staffRole === 'doctor';
+  
+  // Debug logging
+  if (isStaff && staffInfo) {
+    console.log('Role check - staffRole:', staffRole, 'isRadiologist:', isRadiologist, 'isDoctor:', isDoctor);
+  }
 
   const handleCardClick = (view) => {
     setActiveView(view);
@@ -27,6 +43,28 @@ const Dashboard = () => {
   const handleBack = () => {
     setActiveView(null);
   };
+
+  useEffect(() => {
+    const fetchStaffInfo = async () => {
+      if (isStaff && user?.user_id && !staffInfo && !loadingStaffInfo) {
+        setLoadingStaffInfo(true);
+        try {
+          const data = await authService.getStaffByUserId(user.user_id);
+          console.log('Fetched staff info:', data);
+          console.log('Staff role:', data?.role, 'Type:', typeof data?.role);
+          setStaffInfo(data);
+        } catch (err) {
+          console.error('Failed to fetch staff info:', err);
+          // If fetch fails, still set loading to false so UI doesn't hang
+        } finally {
+          setLoadingStaffInfo(false);
+        }
+      }
+    };
+
+    fetchStaffInfo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isStaff, user?.user_id]);
 
   useEffect(() => {
     const fetchPatients = async () => {
@@ -44,10 +82,10 @@ const Dashboard = () => {
       }
     };
 
-    if (isStaff && activeView === 'patients' && patients.length === 0 && !patientsLoading) {
+    if (isDoctor && activeView === 'patients' && patients.length === 0 && !patientsLoading) {
       fetchPatients();
     }
-  }, [activeView, isStaff, patients.length, patientsLoading]);
+  }, [activeView, isDoctor, patients.length, patientsLoading]);
 
   if (!user) {
     return null;
@@ -103,10 +141,21 @@ const Dashboard = () => {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
+      <main className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
         {isPatient && activeView === 'details' ? (
           <PatientDetails userId={user.user_id} onBack={handleBack} />
-        ) : isStaff && activeView === 'patients' ? (
+        ) : isRadiologist && activeView === 'tests' ? (
+          <RadiologistTestsView
+            radiologistId={staffInfo?.staff_id}
+            onBack={handleBack}
+          />
+        ) : isDoctor && selectedPatient ? (
+          <PatientTestView
+            patient={selectedPatient}
+            doctorId={user.user_id}
+            onBack={() => setSelectedPatient(null)}
+          />
+        ) : isDoctor && activeView === 'patients' ? (
           <div className="card">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900">Patients</h2>
@@ -182,7 +231,11 @@ const Dashboard = () => {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {patients.map((patient) => (
-                      <tr key={patient.patient_id || patient.user_id} className="hover:bg-gray-50">
+                      <tr
+                        key={patient.patient_id || patient.user_id}
+                        className="hover:bg-gray-50 cursor-pointer"
+                        onClick={() => setSelectedPatient(patient)}
+                      >
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">
                           {patient.patient_id || 'N/A'}
                         </td>
@@ -325,7 +378,62 @@ const Dashboard = () => {
                     </p>
                   </button>
                 </div>
-              ) : isStaff ? (
+              ) : isStaff && loadingStaffInfo ? (
+                <div className="flex items-center justify-center py-8">
+                  <svg
+                    className="animate-spin h-8 w-8 text-primary-600"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  <span className="ml-3 text-gray-600">Loading...</span>
+                </div>
+              ) : isRadiologist ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <button
+                    onClick={() => handleCardClick('tests')}
+                    className="bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-blue-500 hover:shadow-lg transition-all duration-200 cursor-pointer text-left group"
+                  >
+                    <div className="flex items-center mb-4">
+                      <div className="bg-blue-100 p-3 rounded-lg group-hover:bg-blue-200 transition-colors">
+                        <svg
+                          className="w-8 h-8 text-blue-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                      View Tests
+                    </h3>
+                    <p className="text-gray-600 text-sm">
+                      View and manage assigned scan tests
+                    </p>
+                  </button>
+                </div>
+              ) : isDoctor ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <button
                     onClick={() => handleCardClick('patients')}

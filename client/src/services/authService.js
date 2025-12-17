@@ -147,5 +147,47 @@ export const authService = {
       throw error.response?.data || error.message;
     }
   },
+
+  /**
+   * Get all medical staff
+   * @returns {Promise} Staff list
+   */
+  async getAllStaff() {
+    try {
+      const response = await api.get('/api/v1/staff/');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Get all radiologists
+   * @returns {Promise} Radiologist list
+   */
+  async getRadiologists() {
+    try {
+      const response = await api.get('/api/v1/staff/');
+      const allStaff = response.data;
+      // Filter for radiologists
+      return allStaff.filter(staff => staff.role === 'radiologist');
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Get staff information by user_id
+   * @param {number} userId - User ID
+   * @returns {Promise} Staff data
+   */
+  async getStaffByUserId(userId) {
+    try {
+      const response = await api.get(`/api/v1/staff/user/${userId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 

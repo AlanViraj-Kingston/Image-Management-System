@@ -10,6 +10,17 @@ class ReportStatus(str, enum.Enum):
     FINALIZED = "finalized"
     CANCELLED = "cancelled"
 
+class ScanType(str, enum.Enum):
+    ABDOMINAL_ULTRASOUND = "Abdominal Ultra Sound Scan"
+    CT_SCAN = "CT Scan"
+    MRI_SCAN = "MRI Scan"
+    PET_SCAN = "PET Scan"
+
+class TestStatus(str, enum.Enum):
+    SCAN_TO_BE_TAKEN = "Scan to be taken"
+    SCAN_IN_PROGRESS = "Scan in progress"
+    SCAN_DONE = "Scan Done"
+
 class DiagnosisReport(Base):
     __tablename__ = "diagnosis_reports"
 
@@ -21,6 +32,20 @@ class DiagnosisReport(Base):
     findings = Column(String, nullable=True)
     diagnosis = Column(String, nullable=True)
     status = Column(SQLEnum(ReportStatus), default=ReportStatus.PENDING, nullable=False)
+    updated_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class MedicalTest(Base):
+    __tablename__ = "medical_tests"
+
+    test_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    patient_id = Column(Integer, nullable=False, index=True)
+    doctor_id = Column(Integer, nullable=False, index=True)  # Staff ID of doctor who created the test
+    radiologist_id = Column(Integer, nullable=True, index=True)  # Assigned radiologist
+    test_type = Column(SQLEnum(ScanType), nullable=False)
+    status = Column(SQLEnum(TestStatus), default=TestStatus.SCAN_TO_BE_TAKEN, nullable=False)
+    report_id = Column(Integer, nullable=True)  # Generated report ID
+    image_id = Column(Integer, nullable=True)  # Uploaded scan image ID
+    created_date = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class WorkflowLog(Base):

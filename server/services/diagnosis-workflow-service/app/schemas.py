@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
-from app.models import ReportStatus
+from app.models import ReportStatus, ScanType, TestStatus
 
 class DiagnosisReportCreate(BaseModel):
     patient_id: int
@@ -38,6 +38,37 @@ class WorkflowLogResponse(BaseModel):
     user_id: int
     timestamp: datetime
     action: str
+
+    class Config:
+        from_attributes = True
+
+# ============ MEDICAL TEST SCHEMAS ============
+
+class MedicalTestCreate(BaseModel):
+    patient_id: int
+    doctor_id: int
+    radiologist_id: Optional[int] = None
+    test_type: ScanType
+    status: TestStatus = TestStatus.SCAN_TO_BE_TAKEN
+
+class MedicalTestUpdate(BaseModel):
+    test_type: Optional[ScanType] = None
+    radiologist_id: Optional[int] = None
+    status: Optional[TestStatus] = None
+    report_id: Optional[int] = None
+    image_id: Optional[int] = None
+
+class MedicalTestResponse(BaseModel):
+    test_id: int
+    patient_id: int
+    doctor_id: int
+    radiologist_id: Optional[int] = None
+    test_type: ScanType
+    status: TestStatus
+    report_id: Optional[int] = None
+    image_id: Optional[int] = None
+    created_date: datetime
+    updated_date: Optional[datetime] = None
 
     class Config:
         from_attributes = True

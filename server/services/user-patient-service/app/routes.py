@@ -274,6 +274,14 @@ def register_medical_staff(staff: schemas.MedicalStaffCreate, db: Session = Depe
     db.refresh(new_staff)
     return new_staff
 
+@router.get("/staff/user/{user_id}", response_model=schemas.MedicalStaffResponse)
+def get_staff_by_user_id(user_id: int, db: Session = Depends(get_db)):
+    """Get medical staff information by user_id"""
+    staff = db.query(models.MedicalStaff).filter(models.MedicalStaff.user_id == user_id).first()
+    if not staff:
+        raise HTTPException(status_code=404, detail="Medical staff not found")
+    return staff
+
 @router.get("/staff/{staff_id}", response_model=schemas.MedicalStaffResponse)
 def get_staff_info(staff_id: int, db: Session = Depends(get_db)):
     """Get medical staff information"""
