@@ -26,14 +26,21 @@ def create_test(test: schemas.MedicalTestCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_test)
     
-    # Log the action
-    log_action = models.WorkflowLog(
-        user_id=test.doctor_id,
-        action=f"Created test {new_test.test_id} (Type: {test.test_type.value}) for patient {test.patient_id}",
-        timestamp=datetime.utcnow()
-    )
-    db.add(log_action)
-    db.commit()
+    # Log the action with error handling
+    try:
+        log_action = models.WorkflowLog(
+            user_id=test.doctor_id,
+            action=f"Created test {new_test.test_id} (Type: {test.test_type.value}) for patient {test.patient_id}",
+            timestamp=datetime.utcnow()
+        )
+        db.add(log_action)
+        db.commit()
+    except Exception as e:
+        # Log error but don't fail the request
+        import logging
+        logging.error(f"Failed to create workflow log: {str(e)}")
+        # Rollback log transaction but keep test creation
+        db.rollback()
     
     return new_test
 
@@ -146,14 +153,53 @@ def update_test(
     db.commit()
     db.refresh(test)
     
-    # Log the action
-    log_action = models.WorkflowLog(
-        user_id=test.doctor_id,
-        action=f"Updated test {test_id}",
-        timestamp=datetime.utcnow()
-    )
-    db.add(log_action)
-    db.commit()
+    # Build descriptive log message based on what was updated
+    log_parts = []
+    if "test_type" in fields_set:
+        log_parts.append(f"scan type to {test.test_type.value}")
+    if "radiologist_id" in fields_set:
+        if test.radiologist_id:
+            log_parts.append(f"assigned radiologist {test.radiologist_id}")
+        else:
+            log_parts.append("unassigned radiologist")
+    if "status" in fields_set:
+        log_parts.append(f"status to {test.status.value}")
+    if "image_id" in fields_set:
+        if test.image_id:
+            log_parts.append(f"uploaded image {test.image_id}")
+        else:
+            log_parts.append("removed image")
+    if "report_id" in fields_set:
+        log_parts.append(f"linked report {test.report_id}")
+    
+    # Determine user_id: if image_id was updated, likely the radiologist; otherwise use doctor_id
+    log_user_id = test.doctor_id
+    if "image_id" in fields_set and test.radiologist_id:
+        log_user_id = test.radiologist_id
+    elif "status" in fields_set and test.radiologist_id and test.status == models.TestStatus.SCAN_DONE:
+        log_user_id = test.radiologist_id
+    
+    # Create log message
+    if log_parts:
+        action_msg = f"Updated test {test_id}: " + ", ".join(log_parts)
+    else:
+        action_msg = f"Updated test {test_id}"
+    
+    # Log the action with error handling
+    try:
+        log_action = models.WorkflowLog(
+            user_id=log_user_id,
+            action=action_msg,
+            timestamp=datetime.utcnow()
+        )
+        db.add(log_action)
+        db.commit()
+    except Exception as e:
+        # Log error but don't fail the request
+        import logging
+        logging.error(f"Failed to create workflow log: {str(e)}")
+        # Rollback log transaction but keep test update
+        db.rollback()
     
     return test
 
@@ -212,14 +258,21 @@ def generate_report_for_test(
         db.commit()
         db.refresh(test)
     
-    # Log the action
-    log_action = models.WorkflowLog(
-        user_id=test.doctor_id,
-        action=f"Generated report {report.report_id} for test {test_id}",
-        timestamp=datetime.utcnow()
-    )
-    db.add(log_action)
-    db.commit()
+    # Log the action with error handling
+    try:
+        log_action = models.WorkflowLog(
+            user_id=test.doctor_id,
+            action=f"Generated report {report.report_id} for test {test_id} (Patient {test.patient_id})",
+            timestamp=datetime.utcnow()
+        )
+        db.add(log_action)
+        db.commit()
+    except Exception as e:
+        # Log error but don't fail the request
+        import logging
+        logging.error(f"Failed to create workflow log: {str(e)}")
+        # Rollback log transaction but keep report generation
+        db.rollback()
     
     return test
 
@@ -241,14 +294,21 @@ def generate_report(report: schemas.DiagnosisReportCreate, db: Session = Depends
     db.commit()
     db.refresh(new_report)
     
-    # Log the action
-    log_action = models.WorkflowLog(
-        user_id=report.staff_id,  # Using staff_id as user_id reference
-        action=f"Generated diagnosis report {new_report.report_id} for patient {report.patient_id}",
-        timestamp=datetime.utcnow()
-    )
-    db.add(log_action)
-    db.commit()
+    # Log the action with error handling
+    try:
+        log_action = models.WorkflowLog(
+            user_id=report.staff_id,  # Using staff_id as user_id reference
+            action=f"Generated diagnosis report {new_report.report_id} for patient {report.patient_id}",
+            timestamp=datetime.utcnow()
+        )
+        db.add(log_action)
+        db.commit()
+    except Exception as e:
+        # Log error but don't fail the request
+        import logging
+        logging.error(f"Failed to create workflow log: {str(e)}")
+        # Rollback log transaction but keep report creation
+        db.rollback()
     
     return new_report
 
@@ -303,14 +363,21 @@ def confirm_report(report_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(report)
     
-    # Log the action
-    log_action = models.WorkflowLog(
-        user_id=report.staff_id,
-        action=f"Confirmed diagnosis report {report_id}",
-        timestamp=datetime.utcnow()
-    )
-    db.add(log_action)
-    db.commit()
+    # Log the action with error handling
+    try:
+        log_action = models.WorkflowLog(
+            user_id=report.staff_id,
+            action=f"Confirmed diagnosis report {report_id} (Patient {report.patient_id})",
+            timestamp=datetime.utcnow()
+        )
+        db.add(log_action)
+        db.commit()
+    except Exception as e:
+        # Log error but don't fail the request
+        import logging
+        logging.error(f"Failed to create workflow log: {str(e)}")
+        # Rollback log transaction but keep report confirmation
+        db.rollback()
     
     return report
 
@@ -338,14 +405,21 @@ def update_report(
     db.commit()
     db.refresh(report)
     
-    # Log the action
-    log_action = models.WorkflowLog(
-        user_id=report.staff_id,
-        action=f"Updated diagnosis report {report_id}",
-        timestamp=datetime.utcnow()
-    )
-    db.add(log_action)
-    db.commit()
+    # Log the action with error handling
+    try:
+        log_action = models.WorkflowLog(
+            user_id=report.staff_id,
+            action=f"Updated diagnosis report {report_id} (Patient {report.patient_id})",
+            timestamp=datetime.utcnow()
+        )
+        db.add(log_action)
+        db.commit()
+    except Exception as e:
+        # Log error but don't fail the request
+        import logging
+        logging.error(f"Failed to create workflow log: {str(e)}")
+        # Rollback log transaction but keep report update
+        db.rollback()
     
     return report
 
@@ -372,14 +446,21 @@ def create_appointment(
     db.commit()
     db.refresh(new_appointment)
     
-    # Log the action
-    log_action = models.WorkflowLog(
-        user_id=appointment.created_by,
-        action=f"Created appointment {new_appointment.appointment_id} for patient {appointment.patient_id} with doctor {appointment.doctor_id}",
-        timestamp=datetime.utcnow()
-    )
-    db.add(log_action)
-    db.commit()
+    # Log the action with error handling
+    try:
+        log_action = models.WorkflowLog(
+            user_id=appointment.created_by,
+            action=f"Created appointment {new_appointment.appointment_id} for patient {appointment.patient_id} with doctor {appointment.doctor_id}",
+            timestamp=datetime.utcnow()
+        )
+        db.add(log_action)
+        db.commit()
+    except Exception as e:
+        # Log error but don't fail the request
+        import logging
+        logging.error(f"Failed to create workflow log: {str(e)}")
+        # Rollback log transaction but keep appointment creation
+        db.rollback()
     
     return new_appointment
 
@@ -449,14 +530,38 @@ def update_appointment(
     db.commit()
     db.refresh(appointment)
     
-    # Log the action
-    log_action = models.WorkflowLog(
-        user_id=appointment.created_by,
-        action=f"Updated appointment {appointment_id}",
-        timestamp=datetime.utcnow()
-    )
-    db.add(log_action)
-    db.commit()
+    # Build descriptive log message based on what was updated
+    log_parts = []
+    if "appointment_date" in update_dict:
+        log_parts.append("appointment date")
+    if "status" in update_dict:
+        log_parts.append(f"status to {appointment.status.value}")
+    if "payment_id" in update_dict:
+        log_parts.append("payment ID")
+    if "notes" in update_dict:
+        log_parts.append("notes")
+    
+    # Create log message
+    if log_parts:
+        action_msg = f"Updated appointment {appointment_id} (Patient {appointment.patient_id}): " + ", ".join(log_parts)
+    else:
+        action_msg = f"Updated appointment {appointment_id} (Patient {appointment.patient_id})"
+    
+    # Log the action with error handling
+    try:
+        log_action = models.WorkflowLog(
+            user_id=appointment.created_by,
+            action=action_msg,
+            timestamp=datetime.utcnow()
+        )
+        db.add(log_action)
+        db.commit()
+    except Exception as e:
+        # Log error but don't fail the request
+        import logging
+        logging.error(f"Failed to create workflow log: {str(e)}")
+        # Rollback log transaction but keep appointment update
+        db.rollback()
     
     return appointment
 
@@ -472,14 +577,21 @@ def delete_appointment(appointment_id: int, db: Session = Depends(get_db)):
     db.delete(appointment)
     db.commit()
     
-    # Log the action
-    log_action = models.WorkflowLog(
-        user_id=appointment.created_by,
-        action=f"Deleted appointment {appointment_id}",
-        timestamp=datetime.utcnow()
-    )
-    db.add(log_action)
-    db.commit()
+    # Log the action with error handling
+    try:
+        log_action = models.WorkflowLog(
+            user_id=appointment.created_by,
+            action=f"Deleted appointment {appointment_id} (Patient {appointment.patient_id})",
+            timestamp=datetime.utcnow()
+        )
+        db.add(log_action)
+        db.commit()
+    except Exception as e:
+        # Log error but don't fail the request
+        import logging
+        logging.error(f"Failed to create workflow log: {str(e)}")
+        # Rollback log transaction but keep appointment deletion
+        db.rollback()
     
     return {"message": "Appointment deleted successfully", "appointment_id": appointment_id}
 
