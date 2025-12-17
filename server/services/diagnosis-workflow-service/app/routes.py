@@ -336,6 +336,140 @@ def update_report(
     
     return report
 
+# ============ APPOINTMENT ROUTES ============
+
+@router.post("/appointments/", response_model=schemas.AppointmentResponse)
+def create_appointment(
+    appointment: schemas.AppointmentCreate,
+    db: Session = Depends(get_db)
+):
+    """Create a new appointment"""
+    new_appointment = models.Appointment(
+        patient_id=appointment.patient_id,
+        doctor_id=appointment.doctor_id,
+        appointment_date=appointment.appointment_date,
+        status=models.AppointmentStatus.SCHEDULED,
+        payment_id=appointment.payment_id,
+        created_by=appointment.created_by,
+        notes=appointment.notes,
+        created_date=datetime.utcnow(),
+        updated_date=datetime.utcnow()
+    )
+    db.add(new_appointment)
+    db.commit()
+    db.refresh(new_appointment)
+    
+    # Log the action
+    log_action = models.WorkflowLog(
+        user_id=appointment.created_by,
+        action=f"Created appointment {new_appointment.appointment_id} for patient {appointment.patient_id} with doctor {appointment.doctor_id}",
+        timestamp=datetime.utcnow()
+    )
+    db.add(log_action)
+    db.commit()
+    
+    return new_appointment
+
+@router.get("/appointments/", response_model=List[schemas.AppointmentResponse])
+def get_all_appointments(
+    status: Optional[models.AppointmentStatus] = None,
+    db: Session = Depends(get_db)
+):
+    """Get all appointments, optionally filtered by status"""
+    query = db.query(models.Appointment)
+    if status:
+        query = query.filter(models.Appointment.status == status)
+    return query.order_by(models.Appointment.appointment_date.desc()).all()
+
+@router.get("/appointments/{appointment_id}", response_model=schemas.AppointmentResponse)
+def get_appointment(appointment_id: int, db: Session = Depends(get_db)):
+    """Get an appointment by ID"""
+    appointment = db.query(models.Appointment).filter(
+        models.Appointment.appointment_id == appointment_id
+    ).first()
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+    return appointment
+
+@router.get("/appointments/patient/{patient_id}", response_model=List[schemas.AppointmentResponse])
+def get_patient_appointments(patient_id: int, db: Session = Depends(get_db)):
+    """Get all appointments for a specific patient"""
+    appointments = db.query(models.Appointment).filter(
+        models.Appointment.patient_id == patient_id
+    ).order_by(models.Appointment.appointment_date.desc()).all()
+    return appointments
+
+@router.get("/appointments/doctor/{doctor_id}", response_model=List[schemas.AppointmentResponse])
+def get_doctor_appointments(doctor_id: int, db: Session = Depends(get_db)):
+    """Get all appointments for a specific doctor"""
+    appointments = db.query(models.Appointment).filter(
+        models.Appointment.doctor_id == doctor_id
+    ).order_by(models.Appointment.appointment_date.desc()).all()
+    return appointments
+
+@router.put("/appointments/{appointment_id}", response_model=schemas.AppointmentResponse)
+def update_appointment(
+    appointment_id: int,
+    appointment_update: schemas.AppointmentUpdate,
+    db: Session = Depends(get_db)
+):
+    """Update an appointment"""
+    appointment = db.query(models.Appointment).filter(
+        models.Appointment.appointment_id == appointment_id
+    ).first()
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+    
+    # Get which fields were explicitly set
+    update_dict = appointment_update.model_dump(exclude_unset=True)
+    
+    if "appointment_date" in update_dict:
+        appointment.appointment_date = appointment_update.appointment_date
+    if "status" in update_dict:
+        appointment.status = appointment_update.status
+    if "payment_id" in update_dict:
+        appointment.payment_id = appointment_update.payment_id
+    if "notes" in update_dict:
+        appointment.notes = appointment_update.notes
+    
+    appointment.updated_date = datetime.utcnow()
+    db.commit()
+    db.refresh(appointment)
+    
+    # Log the action
+    log_action = models.WorkflowLog(
+        user_id=appointment.created_by,
+        action=f"Updated appointment {appointment_id}",
+        timestamp=datetime.utcnow()
+    )
+    db.add(log_action)
+    db.commit()
+    
+    return appointment
+
+@router.delete("/appointments/{appointment_id}")
+def delete_appointment(appointment_id: int, db: Session = Depends(get_db)):
+    """Delete an appointment"""
+    appointment = db.query(models.Appointment).filter(
+        models.Appointment.appointment_id == appointment_id
+    ).first()
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+    
+    db.delete(appointment)
+    db.commit()
+    
+    # Log the action
+    log_action = models.WorkflowLog(
+        user_id=appointment.created_by,
+        action=f"Deleted appointment {appointment_id}",
+        timestamp=datetime.utcnow()
+    )
+    db.add(log_action)
+    db.commit()
+    
+    return {"message": "Appointment deleted successfully", "appointment_id": appointment_id}
+
 # ============ WORKFLOW LOG ROUTES ============
 
 @router.post("/logs/", response_model=schemas.WorkflowLogResponse)

@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
-from app.models import ReportStatus, ScanType, TestStatus
+from app.models import ReportStatus, ScanType, TestStatus, AppointmentStatus
 
 class DiagnosisReportCreate(BaseModel):
     patient_id: int
@@ -67,6 +67,37 @@ class MedicalTestResponse(BaseModel):
     status: TestStatus
     report_id: Optional[int] = None
     image_id: Optional[int] = None
+    created_date: datetime
+    updated_date: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+# ============ APPOINTMENT SCHEMAS ============
+
+class AppointmentCreate(BaseModel):
+    patient_id: int
+    doctor_id: int
+    appointment_date: datetime
+    notes: Optional[str] = None
+    payment_id: Optional[int] = None
+    created_by: int  # Clerk user_id
+
+class AppointmentUpdate(BaseModel):
+    appointment_date: Optional[datetime] = None
+    status: Optional[AppointmentStatus] = None
+    payment_id: Optional[int] = None
+    notes: Optional[str] = None
+
+class AppointmentResponse(BaseModel):
+    appointment_id: int
+    patient_id: int
+    doctor_id: int
+    appointment_date: datetime
+    status: AppointmentStatus
+    payment_id: Optional[int] = None
+    created_by: int
+    notes: Optional[str] = None
     created_date: datetime
     updated_date: Optional[datetime] = None
 

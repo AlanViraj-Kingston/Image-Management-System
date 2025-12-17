@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import PatientDetails from '../components/PatientDetails';
 import PatientTestView from '../components/PatientTestView';
 import RadiologistTestsView from '../components/RadiologistTestsView';
+import AppointmentsView from '../components/AppointmentsView';
 import { authService } from '../services/authService';
 
 const Dashboard = () => {
@@ -30,6 +31,7 @@ const Dashboard = () => {
     || (typeof staffRoleRaw === 'string' ? staffRoleRaw.toLowerCase() : String(staffRoleRaw || '').toLowerCase());
   const isRadiologist = staffRole === 'radiologist';
   const isDoctor = staffRole === 'doctor';
+  const isClerk = staffRole === 'clerk';
   
   // Debug logging
   if (isStaff && staffInfo) {
@@ -155,6 +157,20 @@ const Dashboard = () => {
             doctorId={user.user_id}
             onBack={() => setSelectedPatient(null)}
           />
+        ) : isClerk && activeView === 'appointments' ? (
+          <AppointmentsView clerkId={user.user_id} onBack={handleBack} />
+        ) : isClerk && activeView === 'payments' ? (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Payments</h2>
+                <button onClick={handleBack} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors">
+                  Back
+                </button>
+              </div>
+              <p className="text-gray-600">Payments management coming soon...</p>
+            </div>
+          </div>
         ) : isDoctor && activeView === 'patients' ? (
           <div className="card">
             <div className="flex items-center justify-between mb-6">
@@ -430,6 +446,65 @@ const Dashboard = () => {
                     </h3>
                     <p className="text-gray-600 text-sm">
                       View and manage assigned scan tests
+                    </p>
+                  </button>
+                </div>
+              ) : isClerk ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <button
+                    onClick={() => handleCardClick('appointments')}
+                    className="bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-blue-500 hover:shadow-lg transition-all duration-200 cursor-pointer text-left group"
+                  >
+                    <div className="flex items-center mb-4">
+                      <div className="bg-blue-100 p-3 rounded-lg group-hover:bg-blue-200 transition-colors">
+                        <svg
+                          className="w-8 h-8 text-blue-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                      Appointments
+                    </h3>
+                    <p className="text-gray-600 text-sm">
+                      Manage patient appointments and schedules
+                    </p>
+                  </button>
+                  <button
+                    onClick={() => handleCardClick('payments')}
+                    className="bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-green-500 hover:shadow-lg transition-all duration-200 cursor-pointer text-left group"
+                  >
+                    <div className="flex items-center mb-4">
+                      <div className="bg-green-100 p-3 rounded-lg group-hover:bg-green-200 transition-colors">
+                        <svg
+                          className="w-8 h-8 text-green-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                      Payments
+                    </h3>
+                    <p className="text-gray-600 text-sm">
+                      Manage billing and payment records
                     </p>
                   </button>
                 </div>

@@ -57,4 +57,25 @@ class WorkflowLog(Base):
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
     action = Column(String, nullable=False)  # Description of the action logged
 
+class AppointmentStatus(str, enum.Enum):
+    SCHEDULED = "scheduled"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+    NO_SHOW = "no_show"
+
+class Appointment(Base):
+    __tablename__ = "appointments"
+
+    appointment_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    # References (no foreign key constraints for microservices independence)
+    patient_id = Column(Integer, nullable=False, index=True)
+    doctor_id = Column(Integer, nullable=False, index=True)  # Staff ID of doctor
+    appointment_date = Column(DateTime, nullable=False)
+    status = Column(SQLEnum(AppointmentStatus), default=AppointmentStatus.SCHEDULED, nullable=False)
+    payment_id = Column(Integer, nullable=True)  # Link to payment/billing later
+    created_by = Column(Integer, nullable=False)  # Clerk user_id who created the appointment
+    notes = Column(String, nullable=True)  # Optional notes
+    created_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 
