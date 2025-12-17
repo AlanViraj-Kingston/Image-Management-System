@@ -13,6 +13,7 @@ def add_billing(billing: schemas.BillingDetailsCreate, db: Session = Depends(get
     """Add new billing details"""
     new_billing = models.BillingDetails(
         patient_id=billing.patient_id,
+        appointment_id=billing.appointment_id,
         procedure=billing.procedure,
         base_cost=billing.base_cost,
         status=billing.status,

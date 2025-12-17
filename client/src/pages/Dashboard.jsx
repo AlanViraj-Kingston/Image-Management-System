@@ -7,6 +7,7 @@ import RadiologistTestsView from '../components/RadiologistTestsView';
 import AppointmentsView from '../components/AppointmentsView';
 import DoctorAppointmentsView from '../components/DoctorAppointmentsView';
 import PatientAppointmentsView from '../components/PatientAppointmentsView';
+import PaymentsView from '../components/PaymentsView';
 import { authService } from '../services/authService';
 
 const Dashboard = () => {
@@ -170,17 +171,7 @@ const Dashboard = () => {
         ) : isClerk && activeView === 'appointments' ? (
           <AppointmentsView clerkId={user.user_id} onBack={handleBack} />
         ) : isClerk && activeView === 'payments' ? (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Payments</h2>
-                <button onClick={handleBack} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors">
-                  Back
-                </button>
-              </div>
-              <p className="text-gray-600">Payments management coming soon...</p>
-            </div>
-          </div>
+          <PaymentsView clerkId={user.user_id} onBack={handleBack} />
         ) : isDoctor && activeView === 'patients' ? (
           <div className="card">
             <div className="flex items-center justify-between mb-6">

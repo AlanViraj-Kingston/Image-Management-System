@@ -5,9 +5,10 @@ from app.models import BillingStatus
 
 class BillingDetailsCreate(BaseModel):
     patient_id: int
+    appointment_id: Optional[int] = None
     procedure: str
     base_cost: float
-    status: BillingStatus = BillingStatus.PENDING
+    status: BillingStatus = BillingStatus.UNPAID
     report_id: Optional[int] = None
 
 class BillingDetailsUpdate(BaseModel):
@@ -18,6 +19,7 @@ class BillingDetailsUpdate(BaseModel):
 class BillingDetailsResponse(BaseModel):
     billing_id: int
     patient_id: int
+    appointment_id: Optional[int] = None
     procedure: str
     base_cost: float
     status: BillingStatus
